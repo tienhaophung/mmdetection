@@ -34,8 +34,9 @@ def makedir(path):
     except OSError:
         print("Directory %s failed to create!" %path)
 
-'''
-    [{
+''' Json format for detections corresponding for individual video
+output_json = [
+    {
         "version": "1.0",
         "image": {
             "folder": "/export/guanghan/Data_2018/posetrack_data/images/val/000342_mpii_test",
@@ -45,37 +46,36 @@ def makedir(path):
         "candidates": [
             {
                 "det_bbox": [
-                    228.1736297607422,
-                    123.06813049316406,
-                    481.76197814941406,
-                    204.4611053466797
+                    228.1736297607422, # x
+                    123.06813049316406, # y
+                    481.76197814941406, # w
+                    204.4611053466797 # h
                 ],
                 "det_score": 0.9851313233375549
             },
     },(...)
-    ]
+]
 
 '''
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('img', help='Image file')
-    parser.add_argument('config', help='Config file')
-    parser.add_argument('checkpoint', help='Checkpoint file')
+    parser.add_argument('-ddir', '--data_dir', help='Data directory')
+    parser.add_argument('-cfg', '--config', help='Config file')
+    parser.add_argument('-ckpt', '--checkpoint', help='Checkpoint file')
+    parser.add_argument('-odir', "--output_dir", type=str, default="output",
+                    help="Output directory")
     parser.add_argument(
         '--device', default='cuda:0', help='Device used for inference')
     parser.add_argument(
-        '--score-thr', type=float, default=0.3, help='bbox score threshold')
-    parser.add_argument("--annot_dir", type=str, default="",
-                    help="Annotation directory")
-    parser.add_argument("--output_dir", type=str, default="",
-                    help="Output directory")
+        '--score-thr', type=float, default=0.4, help='bbox score threshold')
     args = parser.parse_args()
 
-    anot_paths = list_dir(args["annot_dir"])
+    annot_dir = osp.join(args['data_dir'], "/annotations/val/") # or ./test/
+    anot_paths = list_dir(annot_dir)
     anot_paths.sort()
     makedir(args["output_dir"])
-    
+    output_dir = osp.join(args["output_dir"], "val_detections") # or test_detections
 
     num_frames_list = []
 
@@ -90,7 +90,7 @@ def main():
         
         # Get annotation's filename
         anot_fn = os.path.split(path)[1]
-        anot_file = os.path.join(args["output_dir"], anot_fn)
+        anot_file = os.path.join(output_dir, anot_fn)
         # print(anot_fn)
         num_frames = len(video_anot["annolist"])
         print("#Frames: %d" %num_frames)
@@ -101,6 +101,7 @@ def main():
         video_file = args["data_dir"] + '/' + video_fn
         print("Video: %s" %video_fn)
         
+        # List image in folder 
         video_list = list_dir(video_fn, ['.jpg', '.jpeg', '.png'])
         video_list.sort()
 
@@ -121,9 +122,11 @@ def main():
             result = inference_detector(model, args.img) # bboxes: (#classes, #objects, 5), 
             # 5 values: x1, y1, x2, y2, conf
 
-            human_bboxes = result[0] # human catergory: 0 (according coco format)
+            human_bboxes = result[0] # human catergory: 0 (according coco format in mmdet/evaluation/class_names.py)
             
+            # Traverse candidates
             for box in human_bboxes:
+                # Accept bbox has confidence is greater than a certain threshold
                 if box[-1] > args["score-thr"]:
                     x, y = box[0], box[1]
                     w, h = box[2] - box[0], box[3] - box[1]
