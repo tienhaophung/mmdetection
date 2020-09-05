@@ -1,4 +1,4 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser 
 import os
 from os import path as osp
 import json
@@ -65,22 +65,27 @@ def main():
     parser.add_argument('-ckpt', '--checkpoint', help='Checkpoint file')
     parser.add_argument('-odir', "--output_dir", type=str, default="output",
                     help="Output directory")
+    parser.add_argument('-t', "--type", type=str, default="val",
+                    help="Type of set such as 'val'/'test'")
     parser.add_argument(
         '--device', default='cuda:0', help='Device used for inference')
     parser.add_argument(
         '--score-thr', type=float, default=0.4, help='bbox score threshold')
-    args = parser.parse_args()
+    args = vars(parser.parse_args())
 
-    annot_dir = osp.join(args['data_dir'], "/annotations/val/") # or ./test/
+    print(args)
+
+    annot_dir = osp.join(args['data_dir'], "annotations/{}/".format(args["type"])) # or ./test/
     anot_paths = list_dir(annot_dir)
     anot_paths.sort()
     makedir(args["output_dir"])
-    output_dir = osp.join(args["output_dir"], "val_detections") # or test_detections
+    output_dir = osp.join(args["output_dir"], "{}_detections".format(args["type"])) # or test_detections
+    makedir(output_dir)
 
     num_frames_list = []
 
     # build the model from a config file and a checkpoint file
-    model = init_detector(args.config, args.checkpoint, device=args.device)
+    model = init_detector(args["config"], args["checkpoint"], device=args["device"])
 
     for video_id, path in enumerate(anot_paths):
         # ---------------------- Get video filename and its anotation ----------------------------
@@ -99,10 +104,10 @@ def main():
         # Get video's filename
         video_fn = os.path.split(video_anot["annolist"][0]["image"][0]["name"])[0]
         video_file = args["data_dir"] + '/' + video_fn
-        print("Video: %s" %video_fn)
+        print("Video: %s" %video_file)
         
         # List image in folder 
-        video_list = list_dir(video_fn, ['.jpg', '.jpeg', '.png'])
+        video_list = list_dir(video_file, ['.jpg', '.jpeg', '.png'])
         video_list.sort()
 
         output_data = []
@@ -119,7 +124,7 @@ def main():
             
             candidates = []
             # test a single image
-            result = inference_detector(model, args.img) # bboxes: (#classes, #objects, 5), 
+            result = inference_detector(model, frame_path) # bboxes: (#classes, #objects, 5), 
             # 5 values: x1, y1, x2, y2, conf
 
             human_bboxes = result[0] # human catergory: 0 (according coco format in mmdet/evaluation/class_names.py)
@@ -127,7 +132,7 @@ def main():
             # Traverse candidates
             for box in human_bboxes:
                 # Accept bbox has confidence is greater than a certain threshold
-                if box[-1] > args["score-thr"]:
+                if box[-1] > args["score_thr"]:
                     x, y = box[0], box[1]
                     w, h = box[2] - box[0], box[3] - box[1]
                     box_dict = {"det_bbox": [x, y, w, h],
