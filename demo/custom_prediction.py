@@ -145,7 +145,7 @@ def main():
                     x, y = box[0], box[1]
                     w, h = box[2] - box[0], box[3] - box[1]
                     box_dict = {"det_bbox": [x, y, w, h],
-                                "det_score": box[-1]}
+                                "det_score": box[-1].item()}
                     
                     candidates.append(box_dict)
             
