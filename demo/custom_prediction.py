@@ -142,10 +142,10 @@ def main():
             for box in human_bboxes:
                 # Accept bbox has confidence is greater than a certain threshold
                 if box[-1] > args["score_thr"]:
-                    x, y = box[0], box[1]
-                    w, h = box[2] - box[0], box[3] - box[1]
+                    x, y = float(box[0]), float(box[1])
+                    w, h = float(box[2] - box[0]), float(box[3] - box[1])
                     box_dict = {"det_bbox": [x, y, w, h],
-                                "det_score": box[-1].item()}
+                                "det_score": float(box[-1])}
                     
                     candidates.append(box_dict)
             
