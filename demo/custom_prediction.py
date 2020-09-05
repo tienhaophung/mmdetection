@@ -67,6 +67,8 @@ def main():
                     help="Output directory")
     parser.add_argument('-t', "--type", type=str, default="val",
                     help="Type of set such as 'val'/'test'")
+    parser.add_argument('-dver', "--data_version", type=str, default="17",
+                    help="Dataset version such as '17' or '18'")
     parser.add_argument(
         '--device', default='cuda:0', help='Device used for inference')
     parser.add_argument(
@@ -97,18 +99,25 @@ def main():
         anot_fn = os.path.split(path)[1]
         anot_file = os.path.join(output_dir, anot_fn)
         # print(anot_fn)
-        num_frames = len(video_anot["annolist"])
-        print("#Frames: %d" %num_frames)
-        num_frames_list.append(num_frames)
 
-        # Get video's filename
-        video_fn = os.path.split(video_anot["annolist"][0]["image"][0]["name"])[0]
-        video_file = args["data_dir"] + '/' + video_fn
-        print("Video: %s" %video_file)
-        
-        # List image in folder 
+        # Get video/folder name
+        if args["data_version"] == "17":
+            video_fn = os.path.split(video_anot["annolist"][0]["image"][0]["name"])[0]
+            video_file = args["data_dir"] + '/' + video_fn
+            print("Video: %s" %video_file)
+        else: # 18
+            parent_dir = path.split('/')[-2] # val/test
+            video_file = "{}/images/{}/{}".format(args["data_dir"], parent_dir, anot_fn.split('.')[0])
+            print("Video: %s" %video_file)
+
+        # List dir
         video_list = list_dir(video_file, ['.jpg', '.jpeg', '.png'])
         video_list.sort()
+
+        # Get num_frames
+        num_frames = len(video_list)
+        print("#Frames: %d" %num_frames)
+        num_frames_list.append(num_frames)
 
         output_data = []
 
